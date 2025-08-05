@@ -1,0 +1,33 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the application
+    cmds:
+      - go build -o bin/network-sniffer ./cmd/server
+
+  run:
+    desc: Run the application
+    cmds:
+      - go run ./cmd/server
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+
+  docker:
+    desc: Build Docker image
+    cmds:
+      - docker build -t network-sniffer .
+
+  swagger:
+    desc: Generate swagger documentation
+    cmds:
+      - go install github.com/swaggo/swag/cmd/swag@latest
+      - swag init -g cmd/server/main.go -o docs
