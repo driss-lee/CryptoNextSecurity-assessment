@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	_ "github.com/cryptonextsecurity/network-sniffer/docs" // Swagger docs
 	"github.com/cryptonextsecurity/network-sniffer/internal/api"
+	"github.com/cryptonextsecurity/network-sniffer/internal/config"
 	"github.com/cryptonextsecurity/network-sniffer/internal/services"
 	"github.com/cryptonextsecurity/network-sniffer/internal/storage"
 	"github.com/cryptonextsecurity/network-sniffer/pkg/sniffing"
@@ -19,20 +19,17 @@ import (
 func main() {
 	log.Println("Starting Network Sniffing Service...")
 
-	// Hardcoded configuration values
-	storageMaxSize := 1000
-	sniffingInterval := 5 * time.Second
-	serverPort := "8080"
-	shutdownTimeout := 30 * time.Second
+	// Load configuration from environment variables
+	cfg := config.Load()
 
 	log.Printf("Configuration: Storage Max Size=%d, Sniffing Interval=%v, Server Port=%s, Shutdown Timeout=%v",
-		storageMaxSize, sniffingInterval, serverPort, shutdownTimeout)
+		cfg.StorageMaxSize, cfg.SniffingInterval, cfg.ServerPort, cfg.ShutdownTimeout)
 
 	// Create storage
-	storage := storage.NewInMemoryStorage(storageMaxSize)
+	storage := storage.NewInMemoryStorage(cfg.StorageMaxSize)
 
 	// Create sniffer
-	sniffer := sniffing.NewPacketSniffer(storage, sniffingInterval)
+	sniffer := sniffing.NewPacketSniffer(storage, cfg.SniffingInterval)
 
 	// Create service
 	packetService := services.NewPacketService(storage, sniffer, nil)
@@ -49,13 +46,13 @@ func main() {
 
 	// Setup server
 	server := &http.Server{
-		Addr:    ":" + serverPort,
+		Addr:    ":" + cfg.ServerPort,
 		Handler: ginRouter,
 	}
 
 	// Start server
 	go func() {
-		log.Printf("Server starting on port %s", serverPort)
+		log.Printf("Server starting on port %s", cfg.ServerPort)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
@@ -73,7 +70,7 @@ func main() {
 	log.Println("Packet sniffing stopped")
 
 	// Shutdown server
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	server.Shutdown(shutdownCtx)
 	log.Println("Server stopped")
