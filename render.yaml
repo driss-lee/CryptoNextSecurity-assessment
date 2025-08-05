@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: network-sniffer
+    env: docker
+    plan: free
+    buildCommand: docker build -t network-sniffer .
+    startCommand: docker run -p $PORT:$SERVER_PORT network-sniffer
+    envVars:
+      - key: PORT
+        value: 8080
+    healthCheckPath: /api/v1/packets
+    autoDeploy: true 
