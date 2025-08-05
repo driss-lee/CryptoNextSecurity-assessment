@@ -2,38 +2,94 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  code-quality:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
-    
+
+    - name: Install pre-commit
+      run: |
+        pip install pre-commit
+
+    - name: Install Go tools
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+
+    - name: Run code quality checks
+      run: |
+        pre-commit run --all-files
+
+  build:
+    needs: code-quality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
     - name: Install dependencies
       run: go mod download
-    
-    - name: Run tests
-      run: go test -v ./...
-    
+
     - name: Build application
       run: go build -o bin/network-sniffer cmd/server/main.go
-    
+
     - name: Generate swagger docs
       run: |
         go install github.com/swaggo/swag/cmd/swag@latest
         swag init -g cmd/server/main.go -o docs
-    
+
     - name: Build Docker image
       run: docker build -t network-sniffer .
-    
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: network-sniffer
+        path: bin/network-sniffer
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: network-sniffer
+        path: bin/
+
     - name: Test Docker image with custom environment variables
       run: |
         # Test that the application starts with custom env vars
@@ -50,7 +106,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Deploy to Render
       env:
         RENDER_TOKEN: ${{ secrets.RENDER_TOKEN }}
@@ -58,4 +114,4 @@ jobs:
       run: |
         curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
           -H "Authorization: Bearer $RENDER_TOKEN" \
-          -H "Content-Type: application/json" 
+          -H "Content-Type: application/json"
