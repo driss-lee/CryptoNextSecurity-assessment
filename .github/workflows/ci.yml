@@ -1,5 +1,9 @@
 name: CI/CD Pipeline
 
+# Workflow triggers:
+# - Push to develop: Run code-quality, build, and test jobs
+# - Pull request to main: Run code-quality, build, and test jobs (no deploy)
+# - Push to main: Run all jobs including deploy (only after PR merge)
 on:
   push:
     branches: [ develop, main ]
@@ -7,6 +11,7 @@ on:
     branches: [ main ]
 
 jobs:
+  # Code quality job runs on all triggers (develop pushes, PRs, and main pushes)
   code-quality:
     runs-on: ubuntu-latest
     steps:
@@ -36,6 +41,7 @@ jobs:
       run: |
         pre-commit run --all-files
 
+  # Build job runs on all triggers (develop pushes, PRs, and main pushes)
   build:
     needs: code-quality
     runs-on: ubuntu-latest
@@ -67,6 +73,7 @@ jobs:
         name: network-sniffer
         path: bin/network-sniffer
 
+  # Test job runs on all triggers (develop pushes, PRs, and main pushes)
   test:
     needs: build
     runs-on: ubuntu-latest
@@ -100,6 +107,7 @@ jobs:
           -e SERVER_SHUTDOWN_TIMEOUT=10s \
           network-sniffer || true
 
+  # Deploy job only runs after merging to main (not on PRs)
   deploy:
     needs: test
     runs-on: ubuntu-latest
