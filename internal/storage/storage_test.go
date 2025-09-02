@@ -114,3 +114,85 @@ func TestInMemoryStorage_MaxSize(t *testing.T) {
 		t.Errorf("Expected 2 packets, got %d", response.Total)
 	}
 }
+
+func TestInMemoryStorage_GetByID_And_DeleteByID(t *testing.T) {
+	storage := NewInMemoryStorage(10)
+	ctx := context.Background()
+
+	p := models.NewPacket("192.168.1.1", "8.8.8.8", "TCP", 80, 100)
+	_ = storage.Store(ctx, p)
+
+	// GetByID should return the packet
+	got, err := storage.GetByID(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got == nil || got.ID != p.ID {
+		t.Fatalf("expected packet %s, got %#v", p.ID, got)
+	}
+
+	// DeleteByID should remove it
+	if err := storage.DeleteByID(ctx, p.ID); err != nil {
+		t.Fatalf("unexpected error on delete: %v", err)
+	}
+	got, err = storage.GetByID(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("unexpected error after delete: %v", err)
+	}
+	if got != nil {
+		t.Fatalf("expected nil after delete, got %#v", got)
+	}
+}
+
+func TestInMemoryStorage_Clear(t *testing.T) {
+	storage := NewInMemoryStorage(10)
+	ctx := context.Background()
+
+	_ = storage.Store(ctx, models.NewPacket("192.168.1.1", "8.8.8.8", "TCP", 80, 100))
+	_ = storage.Store(ctx, models.NewPacket("192.168.1.2", "1.1.1.1", "UDP", 53, 100))
+
+	if err := storage.Clear(ctx); err != nil {
+		t.Fatalf("unexpected error clearing: %v", err)
+	}
+
+	resp, err := storage.Get(ctx, nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting after clear: %v", err)
+	}
+	if resp.Total != 0 {
+		t.Fatalf("expected 0 total after clear, got %d", resp.Total)
+	}
+}
+
+func TestInMemoryStorage_Stats(t *testing.T) {
+	storage := NewInMemoryStorage(5)
+	ctx := context.Background()
+
+	// Initially empty
+	s, err := storage.Stats(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error getting stats: %v", err)
+	}
+	if s.TotalPackets != 0 || s.Capacity != 5 {
+		t.Fatalf("unexpected stats when empty: %#v", s)
+	}
+	if s.OldestAt != nil || s.NewestAt != nil {
+		t.Fatalf("expected nil timestamps when empty: %#v", s)
+	}
+
+	// Add two packets
+	_ = storage.Store(ctx, models.NewPacket("10.0.0.1", "8.8.4.4", "TCP", 443, 200))
+	time.Sleep(2 * time.Millisecond)
+	_ = storage.Store(ctx, models.NewPacket("10.0.0.2", "8.8.8.8", "UDP", 53, 60))
+
+	s, err = storage.Stats(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error getting stats: %v", err)
+	}
+	if s.TotalPackets != 2 || s.Capacity != 5 {
+		t.Fatalf("unexpected stats after add: %#v", s)
+	}
+	if s.OldestAt == nil || s.NewestAt == nil || !s.NewestAt.After(*s.OldestAt) && !s.NewestAt.Equal(*s.OldestAt) {
+		t.Fatalf("expected non-nil timestamps with ordering, got %#v", s)
+	}
+}

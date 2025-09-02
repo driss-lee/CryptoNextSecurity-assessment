@@ -39,10 +39,12 @@ func main() {
 	router := api.NewRouter(handler, nil)
 	ginRouter := router.Setup()
 
-	// Start sniffing
+	// Auto-start sniffing on startup
 	ctx := context.Background()
 	log.Println("Starting packet sniffing...")
-	packetService.StartSniffing(ctx)
+	if err := packetService.StartSniffing(ctx); err != nil {
+		log.Printf("Failed to start packet sniffing: %v", err)
+	}
 
 	// Setup server
 	server := &http.Server{

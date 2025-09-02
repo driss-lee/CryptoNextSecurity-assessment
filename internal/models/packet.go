@@ -37,6 +37,14 @@ type PacketFilter struct {
 	Offset        int       `json:"offset,omitempty"`
 }
 
+// Stats contains basic storage statistics
+type Stats struct {
+	TotalPackets int        `json:"total_packets"`
+	Capacity     int        `json:"capacity"`
+	OldestAt     *time.Time `json:"oldest_at,omitempty"`
+	NewestAt     *time.Time `json:"newest_at,omitempty"`
+}
+
 // NewPacket creates a new packet with default values
 func NewPacket(sourceIP, destIP, protocol string, port, size int) *Packet {
 	return &Packet{

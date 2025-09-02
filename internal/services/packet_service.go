@@ -41,3 +41,23 @@ func (s *PacketService) IsSniffingRunning() bool {
 func (s *PacketService) GetPackets(ctx context.Context, filter *models.PacketFilter) (*models.PacketResponse, error) {
 	return s.storage.Get(ctx, filter)
 }
+
+// GetPacketByID retrieves a single packet by ID
+func (s *PacketService) GetPacketByID(ctx context.Context, id string) (*models.Packet, error) {
+	return s.storage.GetByID(ctx, id)
+}
+
+// DeletePacketByID removes a packet by ID
+func (s *PacketService) DeletePacketByID(ctx context.Context, id string) error {
+	return s.storage.DeleteByID(ctx, id)
+}
+
+// ClearPackets removes all packets from storage
+func (s *PacketService) ClearPackets(ctx context.Context) error {
+	return s.storage.Clear(ctx)
+}
+
+// StorageStats returns storage statistics
+func (s *PacketService) StorageStats(ctx context.Context) (*models.Stats, error) {
+	return s.storage.Stats(ctx)
+}
