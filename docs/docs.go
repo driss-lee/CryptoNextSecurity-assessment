@@ -15,6 +15,27 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/health": {
+            "get": {
+                "description": "Service health status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/packets": {
             "get": {
                 "description": "Retrieve all sniffed packets with optional filtering",
@@ -65,6 +86,184 @@ const docTemplate = `{
                         "description": "List of packets",
                         "schema": {
                             "$ref": "#/definitions/models.PacketResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Remove all packets from storage",
+                "tags": [
+                    "packets"
+                ],
+                "summary": "Clear all packets",
+                "responses": {
+                    "204": {
+                        "description": "Cleared"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/packets/{id}": {
+            "get": {
+                "description": "Retrieve a single packet by its unique ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "packets"
+                ],
+                "summary": "Get packet by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Packet ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Packet"
+                        }
+                    },
+                    "404": {
+                        "description": "Packet not found",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a single packet by its unique ID",
+                "tags": [
+                    "packets"
+                ],
+                "summary": "Delete packet by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Packet ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sniffing/start": {
+            "post": {
+                "description": "Start the packet sniffing process",
+                "tags": [
+                    "sniffing"
+                ],
+                "summary": "Start sniffing",
+                "responses": {
+                    "204": {
+                        "description": "Started"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sniffing/status": {
+            "get": {
+                "description": "Get current sniffing service status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sniffing"
+                ],
+                "summary": "Sniffing status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sniffing/stop": {
+            "post": {
+                "description": "Stop the packet sniffing process",
+                "tags": [
+                    "sniffing"
+                ],
+                "summary": "Stop sniffing",
+                "responses": {
+                    "204": {
+                        "description": "Stopped"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/stats": {
+            "get": {
+                "description": "Get current storage statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Storage statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Stats"
                         }
                     },
                     "500": {
@@ -154,6 +353,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Stats": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer"
+                },
+                "newest_at": {
+                    "type": "string"
+                },
+                "oldest_at": {
+                    "type": "string"
+                },
+                "total_packets": {
                     "type": "integer"
                 }
             }

@@ -55,10 +55,47 @@ definitions:
       total:
         type: integer
     type: object
+  models.Stats:
+    properties:
+      capacity:
+        type: integer
+      newest_at:
+        type: string
+      oldest_at:
+        type: string
+      total_packets:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
+  /health:
+    get:
+      description: Service health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - system
   /packets:
+    delete:
+      description: Remove all packets from storage
+      responses:
+        "204":
+          description: Cleared
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Clear all packets
+      tags:
+      - packets
     get:
       consumes:
       - application/json
@@ -98,4 +135,109 @@ paths:
       summary: Get all packets
       tags:
       - packets
+  /packets/{id}:
+    delete:
+      description: Delete a single packet by its unique ID
+      parameters:
+      - description: Packet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Delete packet by ID
+      tags:
+      - packets
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single packet by its unique ID
+      parameters:
+      - description: Packet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Packet'
+        "404":
+          description: Packet not found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Get packet by ID
+      tags:
+      - packets
+  /sniffing/start:
+    post:
+      description: Start the packet sniffing process
+      responses:
+        "204":
+          description: Started
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Start sniffing
+      tags:
+      - sniffing
+  /sniffing/status:
+    get:
+      description: Get current sniffing service status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Sniffing status
+      tags:
+      - sniffing
+  /sniffing/stop:
+    post:
+      description: Stop the packet sniffing process
+      responses:
+        "204":
+          description: Stopped
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Stop sniffing
+      tags:
+      - sniffing
+  /stats:
+    get:
+      description: Get current storage statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Stats'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Storage statistics
+      tags:
+      - system
 swagger: "2.0"

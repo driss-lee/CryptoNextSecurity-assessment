@@ -38,7 +38,22 @@ func (r *Router) Setup() *gin.Engine {
 		packets := api.Group("/packets")
 		{
 			packets.GET("", r.handler.GetPackets)
+			packets.GET(":id", r.handler.GetPacketByID)
+			packets.DELETE(":id", r.handler.DeletePacketByID)
+			packets.DELETE("", r.handler.ClearPackets)
 		}
+
+		// Sniffing control routes
+		sniffing := api.Group("/sniffing")
+		{
+			sniffing.POST("/start", r.handler.StartSniffing)
+			sniffing.POST("/stop", r.handler.StopSniffing)
+			sniffing.GET("/status", r.handler.SniffingStatus)
+		}
+
+		// Health and stats
+		api.GET("/health", r.handler.Health)
+		api.GET("/stats", r.handler.Stats)
 	}
 
 	// Swagger documentation

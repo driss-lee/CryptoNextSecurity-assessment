@@ -15,6 +15,18 @@ type Storage interface {
 
 	// Get retrieves packets with optional filtering
 	Get(ctx context.Context, filter *models.PacketFilter) (*models.PacketResponse, error)
+
+	// GetByID retrieves a single packet by its ID
+	GetByID(ctx context.Context, id string) (*models.Packet, error)
+
+	// DeleteByID removes a packet by its ID
+	DeleteByID(ctx context.Context, id string) error
+
+	// Clear removes all packets from storage
+	Clear(ctx context.Context) error
+
+	// Stats returns storage statistics
+	Stats(ctx context.Context) (*models.Stats, error)
 }
 
 // InMemoryStorage implements Storage interface with in-memory storage
@@ -76,6 +88,63 @@ func (s *InMemoryStorage) Get(ctx context.Context, filter *models.PacketFilter) 
 		Packets:   packets,
 		Total:     len(packets),
 		Timestamp: time.Now(),
+	}, nil
+}
+
+// GetByID retrieves a single packet by ID
+func (s *InMemoryStorage) GetByID(ctx context.Context, id string) (*models.Packet, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	if packet, ok := s.packets[id]; ok {
+		return packet, nil
+	}
+	return nil, nil
+}
+
+// DeleteByID removes a packet by ID
+func (s *InMemoryStorage) DeleteByID(ctx context.Context, id string) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	delete(s.packets, id)
+	return nil
+}
+
+// Clear removes all packets from storage
+func (s *InMemoryStorage) Clear(ctx context.Context) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.packets = make(map[string]*models.Packet)
+	return nil
+}
+
+// Stats returns storage statistics
+func (s *InMemoryStorage) Stats(ctx context.Context) (*models.Stats, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	var oldest *time.Time
+	var newest *time.Time
+
+	for _, p := range s.packets {
+		ts := p.Timestamp
+		if oldest == nil || ts.Before(*oldest) {
+			t := ts
+			oldest = &t
+		}
+		if newest == nil || ts.After(*newest) {
+			t := ts
+			newest = &t
+		}
+	}
+
+	return &models.Stats{
+		TotalPackets: len(s.packets),
+		Capacity:     s.maxSize,
+		OldestAt:     oldest,
+		NewestAt:     newest,
 	}, nil
 }
 
